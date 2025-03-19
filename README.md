@@ -25,7 +25,11 @@ pip install flask openai python-dotenv
 ```
 
 3. 配置您的 DeepSeek ARK API 凭证：
-   - 在 `app.py` 文件中设置您的 API 密钥
+   - 创建 `config.py` 文件并设置您的 API 密钥：
+   ```python
+   DEEPSEEK_API_KEY = "your_api_key"
+   ```
+   - 确保将 `config.py` 添加到 `.gitignore` 以避免泄露密钥
    - 也可以使用环境变量以提高安全性
 
 ## 配置说明
@@ -56,8 +60,9 @@ python app.py
 ## 项目结构
 
 - `app.py`：主要的 Flask 应用服务器
+- `config.py`：配置文件，存储 API 密钥等敏感信息
 - `static/index.html`：网页界面
 - `test_api.py`：API 测试脚本
 
 ## 功能详情
-[页面](./resources/demo.png)
+![页面](./resources/demo.png)
