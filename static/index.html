@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>DeepSeek ARK Web UI</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; height: 100vh; box-sizing: border-box; display: flex; }
+        #chat-container { max-width: 800px; margin: auto; width: 100%; height: calc(100vh - 40px); display: flex; flex-direction: column; }
+        h2 { margin: 0 0 10px 0; }
+        #history { flex: 1 1 auto; min-height: 0; border: 1px solid #ddd; padding: 10px; overflow-y: auto; margin-bottom: 10px; }
+        #input { flex: 0 0 80px; width: 100%; resize: none; padding: 8px; box-sizing: border-box; margin-bottom: 10px; }
+        button { flex: 0 0 40px; padding: 8px 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h2>DeepSeek ARK 聊天</h2>
+        <div id="history"></div>
+        <textarea id="input" placeholder="输入你的问题..."></textarea>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="sendMessage()" style="flex: 1;">发送</button>
+            <button onclick="clearHistory()" style="background-color: #ff4444; color: white;">清空历史</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('input').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('input').value.trim();
+            const historyDiv = document.getElementById('history');
+
+            if (!input) {
+                alert('请输入您的问题');
+                return;
+            }
+
+            // 保存用户消息
+            const userMsg = { role: 'user', content: input };
+            updateHistory(userMsg);
+
+            // 添加处理中的提示消息
+            const processingMsg = { role: 'assistant', content: '' };
+            updateHistory(processingMsg);
+
+            try {
+                const eventSource = new EventSource(`/api/chat?message=${encodeURIComponent(input)}`);
+                let fullResponse = '';
+
+                eventSource.onmessage = function(event) {
+                    if (event.data === '[DONE]') {
+                        eventSource.close();
+                        return;
+                    }
+
+                    try {
+                        const data = JSON.parse(event.data);
+                        fullResponse += data.response;
+
+                        // 更新最后一条消息的内容
+                        let history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+                        history[history.length - 1].content = fullResponse;
+                        localStorage.setItem('chatHistory', JSON.stringify(history));
+                        renderHistory();
+                    } catch (parseError) {
+                        console.error('Error parsing message:', parseError);
+                        const errorMsg = { role: 'assistant', content: '消息解析失败，请重试' };
+                        updateHistory(errorMsg);
+                        eventSource.close();
+                    }
+                };
+
+                eventSource.onerror = function(error) {
+                    console.error('EventSource error:', error);
+                    eventSource.close();
+                    const errorMsg = { role: 'assistant', content: '连接中断，请重试' };
+                    updateHistory(errorMsg);
+                };
+            } catch (error) {
+                console.error('Request error:', error);
+                const errorMsg = { role: 'assistant', content: `请求失败: ${error.message || '未知错误'}` };
+                updateHistory(errorMsg);
+            }
+
+            document.getElementById('input').value = '';
+        }
+
+        function updateHistory(msg) {
+            let history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+            history.push(msg);
+            localStorage.setItem('chatHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+            const historyDiv = document.getElementById('history');
+            historyDiv.innerHTML = history.map(msg => 
+                `<div style="margin: 5px; padding: 8px; background: ${msg.role === 'user' ? '#f0f0f0' : '#e3f2fd'};
+                    border-radius: 5px;">
+                    <strong>${msg.role === 'user' ? '你' : 'AI'}:</strong> ${msg.content}
+                </div>`
+            ).join('');
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+        }
+
+        function clearHistory() {
+            if (confirm('确定要清空所有聊天记录吗？')) {
+                localStorage.removeItem('chatHistory');
+                renderHistory();
+            }
+        }
+
+        // 初始化时加载历史记录
+        window.onload = renderHistory;
+    </script>
+</body>
+</html>
