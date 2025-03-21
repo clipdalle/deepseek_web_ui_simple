@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 # 初始化Openai客户端，从环境变量中读取您的API Key
 from config import DEEPSEEK_API_KEY
 ARK_API_URL = "https://ark.cn-beijing.volces.com/api/v3"
-MODEL_NAME = "deepseek-r1-250120" #"deepseek-v3-241226"
+#MODEL_NAME = "deepseek-r1-250120" 
+MODEL_NAME = "deepseek-v3-241226"
 
 
 # 初始化 OpenAI 客户端
